@@ -5,7 +5,12 @@ SELECT
     id,
     title,
     year,
-    SAFE_CAST(REGEXP_EXTRACT(duration, r'\d+') AS INT64) AS duration,
+    CASE
+        WHEN duration IS NULL THEN NULL
+        ELSE
+            COALESCE(SAFE_CAST(REGEXP_EXTRACT(duration, r'(\d+)h') AS INT64), 0) * 60
+            + COALESCE(SAFE_CAST(REGEXP_EXTRACT(duration, r'(\d+)m') AS INT64), 0)
+    END AS duration,
     rating_imdb,
     vote,
     budget,
@@ -21,13 +26,10 @@ CREATE OR REPLACE TABLE `atividade2-493819.imdb_project.movies_enriched` AS
 SELECT
     m.*,
     c.cpi,
-
-    -- ajuste de inflação (base 2010 = 100)
     m.budget * (100 / c.cpi) AS budget_adjusted,
     m.gross_world_wide * (100 / c.cpi) AS gross_adjusted
-
-FROM `atividade2-493819.imdb_project.movies_clean` m
-LEFT JOIN `atividade2-493819.imdb_project.cpi` c
+FROM `atividade2-493819.imdb_project.movies_clean` AS m
+LEFT JOIN `atividade2-493819.imdb_project.cpi` AS c
 ON m.year = c.year;
 
 -- VERIFICAR TABELA CPI (inflação EUA) APÓS IMPORTAR E CRAIR A TABELA A PARTIR DO CSV  -- 
